@@ -10,32 +10,49 @@ import logging
 logging.basicConfig(filename='crawler.log', encoding='utf-8', level=logging.DEBUG)
 
 HOI4_ID = 394360
+# MAin Mods
 ROAD_TO_56_ID = 820260968
+KAISERREICH_ID = 1521695605
+KAISERREDUX_ID = 2076426030
+# Anime Mods
 ROAD_ANIME_ID = 2129060088
 ANIME_HISTORY_ID = 1862018480
+MOEREICH_ID = 1821967568
+MOEREDUX_ID = 2488199457
+ANIME_HISTORIA_ID = 2224569708
+
 
 tag_list = {"road_to_56": ROAD_TO_56_ID,
+            "kaiserreich": KAISERREICH_ID,
+            "kaiserredux": KAISERREDUX_ID,
             "road_to_anime": ROAD_ANIME_ID,
             "anime_history": ANIME_HISTORY_ID,
+            "moereich": MOEREICH_ID,
+            "moeredux": MOEREDUX_ID,
+            "anime_historia": ANIME_HISTORIA_ID
             }
 
 GFX_PATH = 'gfx'
 FOLDERS_TO_CRAWL = {'leaders'}
+desc = 'Find missing files. Supported Mod tags: \n'
+desc += ', '.join(tag_list.keys()) 
+desc += " (if the tag is not listed just provide the id as number)"
 
-parser = argparse.ArgumentParser(description='Find missing files. Supported Mod tags: \n'
-                                 + ', '.join(tag_list.keys()))
+parser = argparse.ArgumentParser(description=desc)
 parser.add_argument('mod_id', metavar='mod_id', type=str, nargs=1,
                     help='Main mod to look at')
 parser.add_argument('anime_mod_id', metavar='anime_mod_id', type=str, nargs=1,
                     help='Anime mod to look at')
 parser.add_argument('anime_mod_id_to_crawl', metavar='anime_mod_id_to_crawl',
-                    type=str, nargs='*', help='Anime mod to crawl', default=[],
+                    type=str, nargs='*',
+                    help='''Anime mod(s) to crawl. Either one or several. 
+                    If none is given anime_mod_id is used''',
+                    default=[],
                     )
-
 arguments = parser.parse_args()
 
-#base = expanduser('~/.local/share/Steam/steamapps/workshop/content/')
-#hoi4_path = join(base, str(HOI4_ID))
+# base = expanduser('~/.local/share/Steam/steamapps/workshop/content/')
+# hoi4_path = join(base, str(HOI4_ID))
 hoi4_path = getcwd()
 
 
