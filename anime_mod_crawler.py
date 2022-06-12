@@ -119,7 +119,11 @@ class PortraitParser:
     def _portrait_list(self):
         portraits = []
         expr = self.set_expressions()[1]
-        files = list(walk(self.character_path))[0][2]
+        try:
+            files = list(walk(self.character_path))[0][2]
+        except:
+            logging.info("Character folder is missing.")
+            return []
         for file in files:
             full_path = join(self.character_path, file)
             paths = self.parse_file_for_expression(full_path, expr)
@@ -271,7 +275,6 @@ class ModCrawler:
                                       criteria=criteria, suff=suff)
         
             
-
 mod_id = arguments.mod_id[0]
 anime_mod_id = arguments.anime_mod_id[0]
 anime_mod_ids_to_crawl = [anime_mod_id]
@@ -371,10 +374,14 @@ if TEST:
 
 if __name__ == "__main__":
     logging.info("Crawl {}\n".format(anime_mod_id))
-    crawler.crawl()
-    for k, mid in enumerate(anime_mod_ids_to_crawl):
-        logging.info("Lax Crawl {} Mod Nr:{}\n".format(mid, k))
-        crawler.crawl(anime_mod_id_to_crawl=mid,
-                      suff=f"_v{k}", write=False,
-                      criteria=contains_name)
-        crawler.add_missing_portraits(mid)
+    for file_type in [".dds", ".png"]:
+        logging.info(f"Crawl for {file_type}")
+        portrait_parser = PortraitParser(mod_id, pfile_type=file_type)
+        crawler = ModCrawler(mod_id, anime_mod_id, file_type=file_type)
+        crawler.crawl()
+        for k, mid in enumerate(anime_mod_ids_to_crawl):
+            logging.info("Lax Crawl {} Mod Nr:{}\n".format(mid, k))
+            crawler.crawl(anime_mod_id_to_crawl=mid,
+                        suff=f"_v{k}", write=False,
+                        criteria=contains_name)
+            crawler.add_missing_portraits(mid)
