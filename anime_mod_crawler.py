@@ -116,9 +116,8 @@ class PortraitParser:
         paths = [self.replace_path(path, tag) for path in paths]
         return paths
 
-    def _portrait_list(self):
+    def _portrait_list(self, expr):
         portraits = []
-        expr = self.set_expressions()[1]
         try:
             files = list(walk(self.character_path))[0][2]
         except:
@@ -133,9 +132,12 @@ class PortraitParser:
         return portraits
 
     def portrait_list(self):
-        portraits = self._portrait_list()
-        portraits = [join(hoi4_path, str(self.mod_id), p) for p in portraits]
-        return portraits
+        result = []
+        for expr in self.set_expressions():
+            portraits = self._portrait_list(expr)
+            portraits = [join(hoi4_path, str(self.mod_id), p) for p in portraits]
+            result += portraits
+        return result
 
 class ModCrawler:
     def __init__(self, mod_id, anime_mod_id,
