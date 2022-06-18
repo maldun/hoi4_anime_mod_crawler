@@ -88,7 +88,7 @@ class PortraitParser:
         return expr
 
     def parse_file_for_expression(self, filename, expr):
-        with open(filename, 'r') as f:
+        with open(filename, 'r', encoding='utf-8') as f:
             content = f.read()
         results = re.findall(expr, content)
         results = [res[-1] for res in results]
