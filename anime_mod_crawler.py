@@ -150,7 +150,7 @@ class ModCrawler:
         self.anime_mod_id = anime_mod_id
         self.file_type = file_type
         self.out_folder = out_folder
-        self.missing = open(missing_list_file, 'w')
+        self.missing = open(missing_list_file, 'w', encoding='utf-8')
         self.portrait_parser = PortraitParser(mod_id,
                                               pfile_type=file_type)
 
