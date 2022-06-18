@@ -383,7 +383,7 @@ if __name__ == "__main__":
         #crawler.crawl()
         for k, mid in enumerate(anime_mod_ids_to_crawl):
             logging.info("Lax Crawl {} Mod Nr:{}\n".format(mid, k))
-            crawler.crawl(anime_mod_id_to_crawl=mid,
-                        suff=f"_v{k}", write=False,
-                        criteria=contains_name)
+            #crawler.crawl(anime_mod_id_to_crawl=mid,
+            #            suff=f"_v{k}", write=False,
+            #            criteria=contains_name)
             crawler.add_missing_portraits(mid)
