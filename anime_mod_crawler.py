@@ -380,7 +380,7 @@ if __name__ == "__main__":
         logging.info(f"Crawl for {file_type}")
         portrait_parser = PortraitParser(mod_id, pfile_type=file_type)
         crawler = ModCrawler(mod_id, anime_mod_id, file_type=file_type)
-        crawler.crawl()
+        #crawler.crawl()
         for k, mid in enumerate(anime_mod_ids_to_crawl):
             logging.info("Lax Crawl {} Mod Nr:{}\n".format(mid, k))
             crawler.crawl(anime_mod_id_to_crawl=mid,
