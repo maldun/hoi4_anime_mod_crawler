@@ -376,7 +376,7 @@ if TEST:
 
 if __name__ == "__main__":
     logging.info("Crawl {}\n".format(anime_mod_id))
-    for file_type in [".dds", ".png"]:
+    for file_type in [".png", ".dds"]:
         logging.info(f"Crawl for {file_type}")
         portrait_parser = PortraitParser(mod_id, pfile_type=file_type)
         crawler = ModCrawler(mod_id, anime_mod_id, file_type=file_type)
