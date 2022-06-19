@@ -36,6 +36,8 @@ tag_list = {"road_to_56": ROAD_TO_56_ID,
 
 GFX_PATH = 'gfx'
 FOLDERS_TO_CRAWL = {'leaders'}
+ROLES = ['leaders', 'ministers', 'advisors']
+MISC_KEY = 'misc'
 desc = 'Find missing files. Supported Mod tags: \n'
 desc += ', '.join(tag_list.keys()) 
 desc += " (if the tag is not listed just provide the id as number)"
@@ -66,7 +68,7 @@ def same_name(file1, file2, root1=None, root2=None):
 
 def contains_name(file1, file2, root1=None, root2=None):
     if root1 is not None and root2 is not None:
-        for role in ['ministers', 'advisors', 'leaders']: 
+        for role in ROLES: 
             if role in root2:
                 if role not in root1:
                     return False
@@ -151,6 +153,8 @@ class PortraitParser:
 class ModCrawler:
     def __init__(self, mod_id, anime_mod_id,
                  missing_list_file="missing_items.txt",
+                 parsed_out_file='parsed_list.txt',
+                 diff_file="files_to_add.txt",
                  file_type='.dds',out_folder="diff"):
         """
         Set paths for mod and anime mod.
@@ -160,6 +164,8 @@ class ModCrawler:
         self.file_type = file_type
         self.out_folder = out_folder
         self.missing = open(missing_list_file, 'w', encoding='utf-8')
+        self.parsed_out_file = parsed_out_file
+        self.diff_file = diff_file
         self.portrait_parser = PortraitParser(mod_id,
                                               pfile_type=file_type)
 
@@ -231,7 +237,6 @@ class ModCrawler:
                 rfile2 = self.remove_suffix(file2)
                 if criteria(rfile1, rfile2, root1, root2) is True:
                     logging.info(f"Found {root2}{file2} as alternative to {root2}{file1}\n")
-                    self.missing.write(f"{root1}{file1}\n")
                     return root2, file2
 
         return None, None
@@ -265,18 +270,23 @@ class ModCrawler:
         file_list = [file.replace(str(org_mod_id), str(anime_mod_id))
                                   for file in file_list]
         filtered_list = [file for file in file_list if not isfile(file)]
+        # remove duplicates:
+        filtered_list = list(set(filtered_list))
         return filtered_list
 
     def add_missing_portrait(self, file_path, anime_mod_id,
                               anime_mod_id_to_crawl,
                               criteria=contains_name, suff=''):
         root1, file1 = split(file_path)
+        self.missing.write(f"{root1}{file1}\n")
         root2, file2 = self.find_alternative(root1, file1,
                                              criteria,
                                              anime_mod_id=anime_mod_id_to_crawl)
         if root2 is not None:
             self.copy_file(file1, root2, file2, suff, anime_mod_id_to_crawl,
                            anime_mod_id = anime_mod_id, org_root=root1)
+            return True
+        return False
             
     def add_missing_portraits(self, anime_mod_id_to_crawl,
                               criteria=contains_name, suff='',
@@ -285,10 +295,35 @@ class ModCrawler:
             anime_mod_id = self.anime_mod_id
 
         filtered_list = self.filter_missing_files(anime_mod_id)
+
+        self.write_file_list(self.parsed_out_file, filtered_list, anime_mod_id)
+
+        missed_files = []
         for file_path in filtered_list:
-            self.add_missing_portrait(file_path, anime_mod_id,
+            copied = self.add_missing_portrait(file_path, anime_mod_id,
                                       anime_mod_id_to_crawl,
                                       criteria=criteria, suff=suff)
+            if copied is False:
+                missed_files.append(file_path)
+        self.write_file_list(self.diff_file, missed_files, anime_mod_id)
+        
+            
+    @staticmethod
+    def write_file_list(log_name, file_list, anime_mod_id):
+        with open(log_name, 'w', encoding='utf-8') as filep:
+            added_nl = [fname.replace(join(hoi4_path,f'{anime_mod_id}')+sep,'') + '\n'
+                        for fname in file_list]
+            role_lists = {}
+            for role in ROLES:
+                role_lists[role] = [fname for fname in added_nl if sep+role+sep in fname]
+            misc = set(added_nl)
+            misc = misc.difference(*[val for val in role_lists.values()])
+            misc = list(misc)
+            role_lists[MISC_KEY] = misc
+            
+            for key, val in role_lists.items():
+                filep.write(f"\n{key}:\n")
+                filep.writelines(val)
         
             
 mod_id = arguments.mod_id[0]
@@ -343,10 +378,8 @@ def test_parse_file():
     file = f"{mod_id}/common/characters/MAF+ characters.txt"
     var = "large"
     expr = f'{var}(\s*)=(\s*)\"(.*)\"'
-    import pdb; pdb.set_trace()
     result = portrait_parser.parse_file_for_expression(file, expr)
     
-
     assert len(result) == 17
 
 def test_replace_path():
