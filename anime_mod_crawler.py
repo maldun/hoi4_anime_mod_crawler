@@ -222,6 +222,7 @@ class ModCrawler:
                 rfile2 = self.remove_suffix(file2)
                 if criteria(rfile1, rfile2) is True:
                     logging.info(f"Found {root2}{file2} as alternative to {root2}{file1}\n")
+                    self.missing.write(f"{root1}{file1}\n")
                     return root2, file2
 
         return None, None
@@ -270,6 +271,7 @@ class ModCrawler:
                               anime_mod_id=None):
         if anime_mod_id is None:
             anime_mod_id = self.anime_mod_id
+
         filtered_list = self.filter_missing_files(anime_mod_id)
         for file_path in filtered_list:
             self.add_missing_portrait(file_path, anime_mod_id,
