@@ -315,7 +315,7 @@ class ModCrawler:
                         for fname in file_list]
             role_lists = {}
             for role in ROLES:
-                role_lists[role] = [fname for fname in added_nl if sep+role+sep in fname]
+                role_lists[role] = [fname for fname in added_nl if '/'+role+'/' in fname]
             misc = set(added_nl)
             misc = misc.difference(*[val for val in role_lists.values()])
             misc = list(misc)

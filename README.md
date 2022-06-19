@@ -16,6 +16,10 @@ python anime_mod_crawler.py [-h] mod_id anime_mod_id [anime_mod_id_to_crawl ...]
 The script creates a log, a list of files missed and a diff folder which then can be copied 
 into the modfolder in questions.
 
+- parsed_list.txt gives you all files the parser found in the charcterfiles of the main mod but not in the anime mod 
+- files_to_add.txt gives all files no alternative was found
+- missing_items.txt is for debug purposes
+
 ## Examples:
 Crawls through Road to Anime to find missing pictures in Road to 56:
 `python anime_mod_crawler.py road_to_56 road_to_anime`
