@@ -58,15 +58,24 @@ arguments = parser.parse_args()
 hoi4_path = getcwd()
 
 
-def same_name(file1, file2):
+def same_name(file1, file2, root1=None, root2=None):
     if file1.lower() == file2.lower():
         return True
     return False
 
 
-def contains_name(file1, file2):
+def contains_name(file1, file2, root1=None, root2=None):
+    if root1 is not None and root2 is not None:
+        for role in ['ministers', 'advisors', 'leaders']: 
+            if role in root2:
+                if role not in root1:
+                    return False
+    
     parts = file1.split('_')
-    file1 = '_'.join(parts[-2:])
+    if parts[-2].lower() in {'von', 'van', 'de', 'ter', 'du'}:
+        file1 = '_'.join(parts[-3:])
+    else:
+        file1 = '_'.join(parts[-2:])
     if file1.lower() in file2.lower():
         return True
     return False
@@ -220,7 +229,7 @@ class ModCrawler:
                 if not file2.endswith(self.file_type):
                     continue
                 rfile2 = self.remove_suffix(file2)
-                if criteria(rfile1, rfile2) is True:
+                if criteria(rfile1, rfile2, root1, root2) is True:
                     logging.info(f"Found {root2}{file2} as alternative to {root2}{file1}\n")
                     self.missing.write(f"{root1}{file1}\n")
                     return root2, file2
@@ -228,14 +237,17 @@ class ModCrawler:
         return None, None
                 
     def copy_file(self, org_file, found_root, found_file, suff, anime_mod_id_to_crawl,
-                  temp_root=None, anime_mod_id=None):
+                  temp_root=None, anime_mod_id=None,org_root=None):
         """
         Copies file (currently to copy folder)
         """
         if anime_mod_id is None:
             anime_mod_id = self.anime_mod_id
 
-        if temp_root is None:
+        if temp_root is None and org_root is not None:
+            temp_root = org_root.replace(str(anime_mod_id_to_crawl),
+                                           self.out_folder + str(anime_mod_id))
+        elif temp_root is None and org_root is None:
             temp_root = found_root.replace(str(anime_mod_id_to_crawl),
                                            self.out_folder + str(anime_mod_id))
 
@@ -264,7 +276,7 @@ class ModCrawler:
                                              anime_mod_id=anime_mod_id_to_crawl)
         if root2 is not None:
             self.copy_file(file1, root2, file2, suff, anime_mod_id_to_crawl,
-                           anime_mod_id = anime_mod_id)
+                           anime_mod_id = anime_mod_id, org_root=root1)
             
     def add_missing_portraits(self, anime_mod_id_to_crawl,
                               criteria=contains_name, suff='',
@@ -327,14 +339,19 @@ def test_find_replacement():
     assert result[0] == file1
 
 def test_parse_file():
-    file = f"{mod_id}/common/characters/LAT.txt"
+    #file = f"{mod_id}/common/characters/LAT.txt"
+    file = f"{mod_id}/common/characters/MAF+ characters.txt"
     var = "large"
     expr = f'{var}(\s*)=(\s*)\"(.*)\"'
+    import pdb; pdb.set_trace()
     result = portrait_parser.parse_file_for_expression(file, expr)
+    
+
     assert len(result) == 17
 
 def test_replace_path():
-    file = f"{mod_id}/common/characters/LAT.txt"
+    #file = f"{mod_id}/common/characters/LAT.txt"
+    file = f"{mod_id}/common/characters/MAF+ characters.txt"
     var = "large"
     expr = f'{var}(\s*)=(\s*)\"(.*)\"'
     result = portrait_parser.parse_file_for_expression(file, expr)
@@ -367,7 +384,7 @@ if TEST:
     # test_if_file_there()
     # test_if_file_there2()
     test_lax_file_compare()
-    test_find_alternative()
+    # test_find_alternative()
     # test_find_replacement()
     test_parse_file()
     test_replace_path()
