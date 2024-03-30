@@ -429,8 +429,9 @@ class ModCrawlerKR(ModCrawler):
         
         with open(self.diff_file,'w',encoding='utf-8') as f:
             f.write("Files to copy:\n")
-            for key, val in alts.items(): 
-                f.write(f"{key} -> {val}\n")
+            for key, val in alts.items():
+                val = val.replace(join(hoi4_path,str(self.anime_mod_id))+os.sep,'')
+                f.write(f"{val} -> {key}\n")
         
 
     def __del__(self):
