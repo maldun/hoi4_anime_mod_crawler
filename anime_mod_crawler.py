@@ -3,10 +3,13 @@
 from sys import exit
 from os import walk, makedirs, getcwd, sep
 from os.path import join, expanduser, split, isfile
-from shutil import copy
+from shutil import copy as file_copy
 import argparse
 import logging
 import re
+from Hoi4Converter.converter import *
+from Hoi4Converter.mappings import *
+import Hoi4Converter
 
 
 logging.basicConfig(filename='crawler.log', encoding='utf-8', level=logging.DEBUG)
@@ -33,6 +36,9 @@ tag_list = {"road_to_56": ROAD_TO_56_ID,
             "moeredux": MOEREDUX_ID,
             "anime_historia": ANIME_HISTORIA_ID
             }
+
+
+
 
 GFX_PATH = 'gfx'
 FOLDERS_TO_CRAWL = {'leaders'}
@@ -73,15 +79,16 @@ def contains_name(file1, file2, root1=None, root2=None):
                 if role not in root1:
                     return False
     
+    file1 = file1.replace("-","_")
+    file2 = file2.replace("-","_")
     parts = file1.split('_')
-    if parts[-2].lower() in {'von', 'van', 'de', 'ter', 'du'}:
+    if parts[-2].lower() in {'von', 'van', 'de', 'ter', 'du','el'}:
         file1 = '_'.join(parts[-3:])
     else:
         file1 = '_'.join(parts[-2:])
     if file1.lower() in file2.lower():
         return True
     return False
-
 
 class PortraitParser:
     def __init__(self, mod_id, file_type='.txt', pfile_type=".dds"):
@@ -257,12 +264,14 @@ class ModCrawler:
                                            self.out_folder + str(anime_mod_id))
 
         logging.info(f"Copied {found_root}{found_file} to {temp_root}{org_file}\n")
-        makedirs(temp_root, exist_ok=True)
+        new_file = join(temp_root,org_file)
+        new_path = os.path.split(new_file)[0]
+        makedirs(new_path, exist_ok=True)
         if isfile(join(temp_root, org_file)):
             org_file2 = org_file.replace(self.file_type, suff+self.file_type)
         else:
             org_file2 = org_file
-        copy(join(found_root, found_file), join(temp_root, org_file2))
+        file_copy(join(found_root, found_file), join(temp_root, org_file2))
 
     def filter_missing_files(self, anime_mod_id):
         org_mod_id = self.portrait_parser.mod_id
@@ -339,8 +348,96 @@ if anime_mod_id in tag_list.keys():
 anime_mod_ids_to_crawl = [tag_list[mid] if mid in tag_list.keys() else mid
                           for mid in anime_mod_ids_to_crawl]
 
+### New Parser version
+class ModCrawlerKR(ModCrawler):
+    """
+    Specialised KR crawler (because KR devs like to do things differently ...)
+    """
+    KR_PORTRAIT_FOLDER = "interface/kaiserreich/portraits/"
+    TEXTUREFILE_KEY = "texturefile"
+    NAME_KEY = 'name'
+    
+    def get_portraits_from_gfx(self,fname,portrait_type="large"):
+        try:
+            obj = paradox2list(fname)
+        except:
+            msg = f"Error: {fname} not parsable!"
+            self.missing.write(msg)
+            print(msg)
+            
+            
+        items = {}
+        for portrait in obj[0][1]:
+            n, _ = has_key(portrait,self.NAME_KEY)
+            name = n[0][1][0]
+            if '"' in name:
+                name = name.replace('"','')
+            if not name.endswith(portrait_type):
+                continue
+            
+            t, _ = has_key(portrait,self.TEXTUREFILE_KEY)
+            item = t[0][1][0]
+            if '"' in item:
+                item = item.replace('"','')
+            
+            items[name] = item
+            
+        return items
+            
+
+    def parse_list(self):
+        """
+        Parses the .gfx files for portraits and registres them
+        """
+        path = os.path.join(hoi4_path, str(KAISERREICH_ID),self.KR_PORTRAIT_FOLDER)
+        files = os.listdir(path)
+        items = {}
+        for fil in files:
+            fname = os.path.join(path,fil)
+            items.update(self.get_portraits_from_gfx(fname))
+        
+        return items
+    
+    def search_for_alternatives(self, items, suff = "", write=True, criteria=contains_name):
+        """
+        Tries to find alternatives and gives back the items which were not found
+        """
+        not_found = {}
+        alts = {}
+        for name, item in items.items():
+            item_file = os.path.split(item)[1]
+            alt_path, alt = self.find_alternative(None, item_file, criteria)
+            if alt is None:
+                not_found[item] = item
+            else:
+                temp_root = os.path.join(hoi4_path, self.out_folder + str(self.anime_mod_id))
+                if write is True:
+                    self.copy_file(item, alt_path, alt, suff, self.anime_mod_id,
+                    temp_root=temp_root, anime_mod_id=None,org_root=None)
+                
+                alts[item] = os.path.join(alt_path,alt)
+                
+        return alts, not_found
+    
+    def crawl(self, anime_mod_id_to_crawl=None, suff='', write=True, criteria=contains_name):
+        items = crawler.parse_list()
+        alts, not_found = crawler.search_for_alternatives(items,suff=suff,write=write,criteria=criteria)
+        
+
+        self.missing.write("Missing files:\n")
+        self.missing.writelines([it + '\n' for it in not_found])
+        
+        with open(self.diff_file,'w',encoding='utf-8') as f:
+            f.write("Files to copy:\n")
+            for key, val in alts.items(): 
+                f.write(f"{key} -> {val}\n")
+        
+
+    def __del__(self):
+        pass
+
 portrait_parser = PortraitParser(mod_id)
-crawler = ModCrawler(mod_id, anime_mod_id)
+crawler = ModCrawlerKR(mod_id,anime_mod_id,file_type='.png') if mod_id == KAISERREICH_ID else ModCrawler(mod_id, anime_mod_id)
 
 
 def test_if_file_there():
@@ -411,27 +508,43 @@ def test_filter_missing_files():
     result = crawler.filter_missing_files(anime_mod_id)
     result2 = portrait_parser.portrait_list()
     assert len(result) < len(result2)
+    
+def test_parse_portraits():
+    result = crawler.parse_list()
+    isinstance(result, dict)
 
-TEST = False
+def test_search_for_alternatives():
+    items = crawler.parse_list()
+    alts, not_found = crawler.search_for_alternatives(items)
+
+def test_crawl():
+    crawler.crawl()
+
+TEST = True
 if TEST:
     # test_if_file_there()
     # test_if_file_there2()
     test_lax_file_compare()
-    # test_find_alternative()
-    # test_find_replacement()
-    test_parse_file()
-    test_replace_path()
-    test_replace_paths()
-    test_portrait_list()
-    test_filter_missing_files()
+    #test_find_alternative()
+    #test_find_replacement()
+    #test_parse_file()
+    #test_replace_path()
+    #test_replace_paths()
+    #test_portrait_list()
+    #test_filter_missing_files()
+    test_search_for_alternatives()
+    test_parse_portraits()
+    test_crawl()
     exit(0)
+    
+    
 
 if __name__ == "__main__":
     logging.info("Crawl {}\n".format(anime_mod_id))
     for file_type in [".png", ".dds"]:
         logging.info(f"Crawl for {file_type}")
         portrait_parser = PortraitParser(mod_id, pfile_type=file_type)
-        crawler = ModCrawler(mod_id, anime_mod_id, file_type=file_type)
+        crawler = ModCrawlerKR(mod_id, anime_mod_id, file_type=file_type) if mod_id == KAISERREICH_ID else ModCrawler(mod_id, anime_mod_id, file_type=file_type)
         #crawler.crawl()
         for k, mid in enumerate(anime_mod_ids_to_crawl):
             logging.info("Lax Crawl {} Mod Nr:{}\n".format(mid, k))
